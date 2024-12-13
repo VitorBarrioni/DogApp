@@ -16,16 +16,37 @@ class DogsListScreen extends StatefulWidget {
 
 class _DogsListScreenState extends State<DogsListScreen> {
   List<Dog> dogs = [];
+  List<Dog> filteredDogs = [];
   bool isLoading = false;
   String? errorMessage;
   int currentPage = 0;
   final int limit = 12;
   int totalPages = 0;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     fetchDogs();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterDogs(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        filteredDogs = dogs;
+      } else {
+        filteredDogs = dogs
+            .where(
+                (dog) => dog.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
   }
 
   String getApiUrl(String endpoint) {
@@ -74,6 +95,7 @@ class _DogsListScreenState extends State<DogsListScreen> {
 
         setState(() {
           dogs = newDogs;
+          filteredDogs = newDogs;
           isLoading = false;
         });
       } else {
@@ -154,6 +176,29 @@ class _DogsListScreenState extends State<DogsListScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterDogs,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search breeds...',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                prefixIcon: const Icon(Icons.search, color: Colors.white),
+                filled: true,
+                fillColor: Colors.grey[900],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Colors.blue),
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: errorMessage != null
                 ? _buildErrorWidget()
@@ -222,9 +267,9 @@ class _DogsListScreenState extends State<DogsListScreen> {
         crossAxisSpacing: 8,
         mainAxisSpacing: 8,
       ),
-      itemCount: dogs.length,
+      itemCount: filteredDogs.length,
       itemBuilder: (context, index) {
-        final dog = dogs[index];
+        final dog = filteredDogs[index];
         return _buildDogCard(dog);
       },
     );
