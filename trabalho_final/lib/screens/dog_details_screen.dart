@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/dog.dart';
 
-class DogDetailsScreen extends StatelessWidget {
+class DogDetailsScreen extends StatefulWidget {
   final Dog dog;
 
   const DogDetailsScreen({super.key, required this.dog});
 
+  @override
+  State<DogDetailsScreen> createState() => _DogDetailsScreenState();
+}
+
+class _DogDetailsScreenState extends State<DogDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -16,37 +21,31 @@ class DogDetailsScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: Colors.black,
             iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                dog.name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
               background: Hero(
-                tag: 'dog_${dog.id}',
-                child: CachedNetworkImage(
-                  imageUrl: dog.bestImageUrl,
+                tag: 'dog_${widget.dog.id}',
+                child: Image.network(
+                  'https://images.weserv.nl/?url=${Uri.encodeComponent(widget.dog.bestImageUrl)}',
                   fit: BoxFit.cover,
-                  memCacheWidth: 1200,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[900],
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[900],
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
                       ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) {
-                    print('Error loading image: $url - $error');
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
                     return Container(
                       color: Colors.grey[900],
                       child: const Icon(
                         Icons.pets,
-                        size: 100,
+                        size: 50,
                         color: Colors.grey,
                       ),
                     );
@@ -55,102 +54,96 @@ class DogDetailsScreen extends StatelessWidget {
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                _buildInfoSection('Breed Group', dog.breedGroup),
-                const SizedBox(height: 16),
-                _buildInfoSection('Temperament', dog.temperament),
-                const SizedBox(height: 16),
-                _buildInfoSection('Life Span', dog.lifeSpan),
-                if (dog.images.isNotEmpty) ...[
-                  const SizedBox(height: 24),
-                  const Text(
-                    'More Photos',
-                    style: TextStyle(
-                      fontSize: 20,
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.dog.name,
+                    style: const TextStyle(
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: dog.images.length,
-                      itemBuilder: (context, index) {
-                        final image = dog.images[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: CachedNetworkImage(
-                              imageUrl: image.url,
-                              width: 200,
-                              fit: BoxFit.cover,
-                              memCacheWidth: 400,
-                              placeholder: (context, url) => Container(
-                                color: Colors.grey[900],
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white),
-                                  ),
-                                ),
-                              ),
-                              errorWidget: (context, url, error) {
-                                print('Error loading thumbnail: $url - $error');
-                                return Container(
-                                  color: Colors.grey[900],
-                                  child: const Icon(
-                                    Icons.pets,
-                                    size: 50,
-                                    color: Colors.grey,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      },
+                  const SizedBox(height: 16),
+                  if (widget.dog.temperament != null) ...[
+                    const Text(
+                      'Temperament:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white70,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.dog.temperament!,
+                      style: const TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (widget.dog.images.isNotEmpty) ...[
+                    const Text(
+                      'More Images:',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.dog.images.length,
+                        itemBuilder: (context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                'https://images.weserv.nl/?url=${Uri.encodeComponent(widget.dog.images[index].url)}',
+                                width: 200,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.grey[900],
+                                    width: 200,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[900],
+                                    width: 200,
+                                    child: const Icon(
+                                      Icons.pets,
+                                      size: 30,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ],
-              ]),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoSection(String title, String content) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue, // Blue accent color
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            content,
-            style: const TextStyle(
-              fontSize: 16,
-              height: 1.5,
-              color: Colors.white,
+              ),
             ),
           ),
         ],

@@ -4,6 +4,8 @@ import 'dart:convert';
 import '../models/dog.dart';
 import 'dog_details_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../main.dart' show baseUrl;
 
 class DogsListScreen extends StatefulWidget {
   const DogsListScreen({super.key});
@@ -26,6 +28,14 @@ class _DogsListScreenState extends State<DogsListScreen> {
     fetchDogs();
   }
 
+  String getApiUrl(String endpoint) {
+    if (kIsWeb) {
+      // Use CORS proxy for web
+      return 'https://cors-anywhere.herokuapp.com/https://api.thedogapi.com$endpoint';
+    }
+    return 'https://api.thedogapi.com$endpoint';
+  }
+
   Future<void> fetchDogs() async {
     if (isLoading) return;
 
@@ -35,8 +45,14 @@ class _DogsListScreenState extends State<DogsListScreen> {
     });
 
     try {
+      final uri = Uri.parse('https://api.thedogapi.com/v1/breeds');
       final response = await http.get(
-        Uri.parse('https://api.thedogapi.com/v1/breeds'),
+        uri,
+        headers: {
+          'x-api-key':
+              'live_yc0NdOigxPjeFVXhXTPFptxFHrWOF9M3P66NXbCcWgZY4n0A8mPhBACDzga4xnEL',
+          if (kIsWeb) 'Access-Control-Allow-Origin': '*',
+        },
       );
 
       if (response.statusCode == 200) {
@@ -64,6 +80,7 @@ class _DogsListScreenState extends State<DogsListScreen> {
         throw Exception('Failed to load dogs: ${response.statusCode}');
       }
     } catch (e) {
+      print('Error in fetchDogs: $e');
       setState(() {
         isLoading = false;
         errorMessage = e.toString();
@@ -72,19 +89,20 @@ class _DogsListScreenState extends State<DogsListScreen> {
   }
 
   Future<void> fetchDogImages(Dog dog) async {
-    const apiKey = 'YOUR_API_KEY';
     try {
+      final uri = Uri.parse(
+          'https://api.thedogapi.com/v1/images/search?breed_id=${dog.id}&limit=5');
       final response = await http.get(
-        Uri.parse(
-            'https://api.thedogapi.com/v1/images/search?breed_id=${dog.id}&limit=5'),
+        uri,
         headers: {
-          'x-api-key': apiKey,
+          'x-api-key':
+              'live_yc0NdOigxPjeFVXhXTPFptxFHrWOF9M3P66NXbCcWgZY4n0A8mPhBACDzga4xnEL',
         },
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        if (data.isNotEmpty) {
+        if (data.isNotEmpty && mounted) {
           setState(() {
             dog.images = data
                 .map((json) => DogImage.fromJson(json))
@@ -240,26 +258,32 @@ class _DogsListScreenState extends State<DogsListScreen> {
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(8),
                   ),
-                  child: CachedNetworkImage(
-                    imageUrl: dog.bestImageUrl,
+                  child: Image.network(
+                    'https://images.weserv.nl/?url=${Uri.encodeComponent(dog.bestImageUrl)}',
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.grey[800],
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        color: Colors.grey[800],
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
                         ),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.grey[800],
-                      child: const Icon(
-                        Icons.pets,
-                        size: 30,
-                        color: Colors.grey,
-                      ),
-                    ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading image: $error');
+                      return Container(
+                        color: Colors.grey[800],
+                        child: const Icon(
+                          Icons.pets,
+                          size: 30,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
                   ),
                 ),
               ),
